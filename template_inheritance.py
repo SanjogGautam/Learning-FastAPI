@@ -1,10 +1,15 @@
-from fastapi import FastAPI,Request
-from fastapi.responses import HTMLResponse  # 1. Must import this for HTML to work
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse 
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles  # 1. Import the static file handler
 
 app = FastAPI()
-templates=Jinja2Templates(directory="templates")
+
+# 2. Mount the local 'static' directory onto the '/static' web URL path
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 3. Configure the templates system configuration
+templates = Jinja2Templates(directory="templates")
 
 posts: list[dict] = [
     {
@@ -19,25 +24,17 @@ posts: list[dict] = [
     }
 ]
 
-# 2. Separate function for the root URL
-
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/posts", response_class=HTMLResponse, include_in_schema=False)
-def home(request:Request):
+def home(request: Request):
     return templates.TemplateResponse(
         request,name="home.html",
         context={
-            "posts_list":posts,
-            "title":"Home"
+            "posts_list": posts, 
+            "title": "Home"
         }
     )
 
-# # 3. Separate function for the HTML posts view
-# @app.get("/posts", response_class=HTMLResponse, include_in_schema=False)
-# def get_html_posts():
-#     return f"<h1>Featured Author: {posts[0]['name']}</h1>"
-
-# 4. (This will show up in /docs)
 @app.get("/api/posts")
 def get_posts():
     return posts

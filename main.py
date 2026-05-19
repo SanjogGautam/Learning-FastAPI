@@ -24,7 +24,6 @@ def home():
 # 3. Separate function for the HTML posts view
 @app.get("/posts", response_class=HTMLResponse, include_in_schema=False)
 def get_html_posts():
-    # Fixed your missing closing </h1> tag from the original snippet!
     return f"<h1>Featured Author: {posts[0]['name']}</h1>"
 
 # 4. (This will show up in /docs)

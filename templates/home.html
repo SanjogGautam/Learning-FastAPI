@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h1>Welcome to BazarNP Marketplace Blog</h1>
+    <hr>
+    
+    {# We loop over 'posts_list' passed from the context dict #}
+    {% for post in posts_list %}
+        <div>
+            <h2>Author: {{ post.name }}</h2>
+            <p>{{ post.content }}</p>
+        </div>
+        <hr>
+    {% endfor %}
+{% endblock %}

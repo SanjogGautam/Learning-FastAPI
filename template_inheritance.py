@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles  # 1. Import the static file handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as starletteHTTPException
-
+from schema import user_response,user_create 
 app = FastAPI()
 
 # 2. Mount the local 'static' directory onto the '/static' web URL path
@@ -19,12 +19,14 @@ posts: list[dict] = [
     {
         "id": 1,
         "name": "Sanjog Gautam",
-        "content": "Hello my name is sanjog gautam and i am from Parbat!"
+        "content": "Hello my name is sanjog gautam and i am from Parbat!",
+        "date_posted":"sanjog"
     },
     {
         "id": 2,
         "name": "Sarin Pradhan",
-        "content": "Hello my name is Sarin Pradhan and i am from Kirtipur!"
+        "content": "Hello my name is Sarin Pradhan and i am from Kirtipur!",
+        "date_posted":"sanjog"
     }
 ]
 
@@ -38,7 +40,7 @@ def home(request: Request):
             "title": "Home"
         }
     )
-@app.get("/posts/{post_id}",include_in_schema=False)
+@app.get("/posts/{post_id}",include_in_schema=False,response_model=user_response)
 def post_page(request:Request,post_id:int):
     for post in posts:
         if post.get("id")==post_id:
@@ -57,9 +59,20 @@ def get_posts(post_id:int):
             return post
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Post is not found")
 
-@app.get("/api/posts")
+@app.get("/api/posts",response_model=list[user_response])#for validation of the data missing filed pani vetauxa and extra data nee hataidinxa
 def get_posts():
     return posts
+@app.post("/api/posts",response_model=user_response,status_code=status.HTTP_201_CREATED,)
+def create_post(post:user_create):
+    new_id=max(p["id"] for p in posts)+1 if posts else 1
+    newpost={
+        "id":new_id,
+        "name":post.name,
+        "content":post.content,
+        "date_posted":"June 29 2005"
+    }
+    posts.append(newpost)
+    return newpost   
 #general http exception handler
 @app.exception_handler(starletteHTTPException)
 def general_http_excetption_handler(request:Request,exception: starletteHTTPException):

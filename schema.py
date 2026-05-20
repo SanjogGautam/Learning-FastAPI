@@ -17,6 +17,11 @@ class user_response(userBase):
     id: int # Automatically provided by your database
     image_file: str | None
     image_path: str
+class UserUpdate(BaseModel):
+    username: str|None = Field(default=None,min_length=3, max_length=40)
+    email: EmailStr|None = Field(default=None,max_length=120)
+    image_file: str | None = Field(default=None,min_length=3, max_length=40)
+
 class PostBase(BaseModel):
     title: str = Field(min_length=1, max_length=50)
     content: str = Field(min_length=1)
@@ -28,3 +33,6 @@ class Post_response(PostBase):
     user_id: int
     date_posted:datetime
     author: user_response
+class PostUpdate(BaseModel):
+    title: str|None = Field(default=None,min_length=1, max_length=50)
+    content: str|None = Field(default=None,min_length=1)

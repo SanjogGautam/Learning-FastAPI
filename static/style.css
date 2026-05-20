@@ -1,0 +1,4 @@
+/* Minor overrides — Bootstrap handles the rest */
+body { color: #1a1a1a; }
+.list-group-item { border-color: #e5e5e5; }
+.list-group-item:hover { background-color: #f8f8f8; }

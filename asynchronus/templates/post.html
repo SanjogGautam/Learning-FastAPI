@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<a href="/" class="text-muted small text-decoration-none d-inline-block mb-4">&larr; Back to posts</a>
+
+<article>
+    <h2 class="fw-semibold mb-3">{{ post.title }}</h2>
+
+    <div class="d-flex align-items-center gap-2 mb-4 pb-3 border-bottom">
+        <img
+            src="{{ post.author.image_path }}"
+            alt="{{ post.author.username }}"
+            class="rounded-circle"
+            width="30" height="30"
+            style="object-fit: cover;"
+            onerror="this.src='/static/profile_pics/default.jpg'"
+        />
+        <a href="/users/{{ post.author.id }}/posts" class="text-dark text-decoration-none small fw-medium">
+            {{ post.author.username }}
+        </a>
+        <span class="text-muted small">&middot; {{ post.date_posted.strftime('%B %d, %Y') }}</span>
+    </div>
+
+    <div class="lh-lg text-secondary" style="font-size: 0.97rem;">
+        {% for para in post.content.split('\n\n') %}
+            {% if para.strip() %}<p>{{ para.strip() }}</p>{% endif %}
+        {% endfor %}
+    </div>
+</article>
+{% endblock %}

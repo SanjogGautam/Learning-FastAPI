@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 import models
 from database import Base, engine, get_db
 from routers import users,posts
-from schema import Post_response
+from schema import Post_response,PostUpdate
 # Base.metadata.create_all(bind=engine)
 
 
@@ -90,8 +90,6 @@ async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, 
                         detail="Post is not found")
 
 # general http exception handler
-
-
 @app.exception_handler(starletteHTTPException)
 async def general_http_excetption_handler(request: Request, exception: starletteHTTPException):
     message = (exception.detail

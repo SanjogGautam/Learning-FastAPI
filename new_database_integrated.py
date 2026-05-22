@@ -38,7 +38,7 @@ def home(request: Request,db:Annotated[Session,Depends(get_db)]):
     )
 
 
-@app.get("/posts/{post_id}", include_in_schema=False, response_model=list[Post_response])
+@app.get("/posts/{post_id}", include_in_schema=False, response_model=Post_response)
 def post_page(request: Request, post_id: int,db:Annotated[Session,Depends(get_db)]):
     result=db.execute(select(models.Post).where(models.Post.id==post_id))
     post=result.scalars().first()
@@ -182,7 +182,7 @@ def user_update_parital(user_id: int,user_data:UserUpdate,db : Annotated[Session
         existing_user=result.scalars().first()
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=status.http_400_BAD_REQUEST,
                 detail="username already exists"
             )
     if user_data.email is not None and user_data.email!= user.email:
@@ -192,7 +192,7 @@ def user_update_parital(user_id: int,user_data:UserUpdate,db : Annotated[Session
         existing_user=result.scalars().first()
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="email already exists"
             )
     if user_data.email is not None:
@@ -300,7 +300,7 @@ def general_http_excetption_handler(request: Request, exception: starletteHTTPEx
 
 
 @app.exception_handler(RequestValidationError)
-def general_http_excetption_handler(request: Request, exception: RequestValidationError):
+def general_validation_excetption_handler(request: Request, exception: RequestValidationError):
     if request.url.path.startswith("/api"):
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

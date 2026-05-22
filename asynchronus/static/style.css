@@ -1,4 +1,113 @@
-/* Minor overrides — Bootstrap handles the rest */
-body { color: #1a1a1a; }
-.list-group-item { border-color: #e5e5e5; }
-.list-group-item:hover { background-color: #f8f8f8; }
+/* ========================================
+   style.css
+   ======================================== */
+
+/* ── DARK MODE — nuclear option, force everything white ── */
+[data-bs-theme="dark"] *:not(.btn):not(.navbar):not(.nav-link):not(img):not(.form-check-input):not(.btn-close) {
+    color: #e0e0e0 !important;
+    border-color: #2a2a2a;
+}
+
+[data-bs-theme="dark"] body {
+    background-color: #141414 !important;
+}
+
+/* specific overrides after the broad rule */
+[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] .small,
+[data-bs-theme="dark"] .form-text {
+    color: #999 !important;
+}
+
+[data-bs-theme="dark"] .navbar {
+    background-color: #111 !important;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+[data-bs-theme="dark"] .navbar .nav-link,
+[data-bs-theme="dark"] .navbar .navbar-brand {
+    color: #f0f0f0 !important;
+}
+
+[data-bs-theme="dark"] .list-group-item {
+    background-color: #1e1e1e !important;
+    border-color: #2a2a2a !important;
+}
+
+[data-bs-theme="dark"] .list-group-item:hover {
+    background-color: #252525 !important;
+}
+
+[data-bs-theme="dark"] .modal-content {
+    background-color: #242424 !important;
+    border-color: #383838 !important;
+}
+
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer {
+    background-color: #2a2a2a !important;
+    border-color: #383838 !important;
+}
+
+[data-bs-theme="dark"] .form-control {
+    background-color: #1a1a1a !important;
+    border-color: #444 !important;
+    color: #f0f0f0 !important;
+}
+
+[data-bs-theme="dark"] .form-control::placeholder {
+    color: #666 !important;
+}
+
+[data-bs-theme="dark"] .form-control:focus {
+    background-color: #1a1a1a !important;
+    border-color: #666 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.08) !important;
+}
+
+[data-bs-theme="dark"] .btn-close {
+    filter: invert(1);
+}
+
+[data-bs-theme="dark"] .border-bottom {
+    border-color: #2a2a2a !important;
+}
+
+/* ── POST CARDS (home page) ── */
+.post-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.post-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.post-card-title {
+    color: #111;
+    font-size: 1rem;
+}
+
+a:hover .post-card-title {
+    color: #0d6efd;
+}
+
+[data-bs-theme="dark"] .post-card {
+    background: #1e1e1e !important;
+    border-color: #2a2a2a !important;
+}
+
+[data-bs-theme="dark"] .post-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+[data-bs-theme="dark"] a:hover .post-card-title {
+    color: #6ea8fe !important;
+}
+
+/* ── LINK COLORS ── */
+.post-title-link { color: #212529; }
+[data-bs-theme="dark"] .post-title-link { color: #e0e0e0 !important; }

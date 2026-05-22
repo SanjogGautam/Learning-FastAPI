@@ -3,18 +3,21 @@
 {% block content %}
 {% if posts_list %}
 {% set author = posts_list[0].author %}
+
 <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
     <img
         src="{{ author.image_path }}"
         alt="{{ author.username }}"
         class="rounded-circle"
-        width="48" height="48"
-        style="object-fit: cover;"
+        width="56" height="56"
+        style="object-fit: cover; border: 2px solid #dee2e6;"
         onerror="this.src='/static/profile_pics/default.jpg'"
     />
     <div>
-        <div class="fw-semibold">{{ author.username }}</div>
-        <div class="text-muted small">{{ posts_list | length }} post{% if posts_list | length != 1 %}s{% endif %}</div>
+        <div class="fw-semibold fs-5">{{ author.username }}</div>
+        <div class="text-muted small">
+            {{ posts_list | length }} post{% if posts_list | length != 1 %}s{% endif %}
+        </div>
     </div>
 </div>
 
@@ -22,39 +25,52 @@
     {% for post in posts_list %}
     <div class="list-group-item py-3 px-4">
         <div class="d-flex justify-content-between align-items-center">
-            <a href="/posts/{{ post.id }}" class="fw-medium text-decoration-none text-dark">
+            <a href="/posts/{{ post.id }}" class="fw-medium text-decoration-none post-title-link">
                 {{ post.title }}
             </a>
             <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
                 <span class="text-muted small">{{ post.date_posted.strftime('%b %d, %Y') }}</span>
                 <button
                     class="btn btn-sm btn-outline-primary"
-                    onclick="openEditModal(`{{ post.id }}`, '{{ post.title | escape }}', '{{ post.content | escape }}')">Edit</button>
-            <button
+                    onclick="openEditModal(`{{ post.id }}`, `{{ post.title | replace('`', '') }}`, `{{ post.content | replace('`', '') }}`)">
+                    Edit
+                </button>
+                <button
                     class="btn btn-sm btn-outline-danger"
-                    onclick="if(confirm('Delete this post?')) { fetch('/api/posts/{{ post.id }}', { method: 'DELETE' }).then(() => location.reload()); }"
-                >Delete</button>
+                    onclick="deletePost({{ post.id }})">
+                    Delete
+                </button>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
-<!-- Edit Modal -->
+
+<a href="/" class="text-muted small text-decoration-none d-inline-block mt-4">&larr; All posts</a>
+
+{% else %}
+<div class="text-center py-5">
+    <p class="text-muted mb-3">No posts yet.</p>
+    <button class="btn btn-primary btn-sm" onclick="openNewPostModal()">Write your first post</button>
+</div>
+{% endif %}
+
+<!-- Edit Modal — only needed on this page -->
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Post</h5>
+                <h5 class="modal-title fw-semibold">Edit Post</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div id="editError" class="alert alert-danger d-none"></div>
                 <div class="mb-3">
-                    <label class="form-label fw-medium">Title</label>
+                    <label class="form-label fw-medium" for="editTitle">Title</label>
                     <input type="text" class="form-control" id="editTitle" />
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-medium">Content</label>
+                    <label class="form-label fw-medium" for="editContent">Content</label>
                     <textarea class="form-control" id="editContent" rows="6"></textarea>
                 </div>
             </div>
@@ -65,51 +81,4 @@
         </div>
     </div>
 </div>
-
-<script>
-    let currentPostId = null;
-    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-
-    function openEditModal(id, title, content) {
-        currentPostId = id;
-        document.getElementById('editTitle').value = title;
-        document.getElementById('editContent').value = content;
-        document.getElementById('editError').classList.add('d-none');
-        editModal.show();
-    }
-
-    async function saveEdit() {
-        const title = document.getElementById('editTitle').value.trim();
-        const content = document.getElementById('editContent').value.trim();
-        const errorDiv = document.getElementById('editError');
-
-        if (!title || !content) {
-            errorDiv.textContent = 'Title and content are required.';
-            errorDiv.classList.remove('d-none');
-            return;
-        }
-
-        const res = await fetch(`/api/posts/${currentPostId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, content })
-        });
-
-        if (res.ok) {
-            editModal.hide();
-            location.reload();
-        } else {
-            const data = await res.json();
-            errorDiv.textContent = data.detail || 'Failed to save.';
-            errorDiv.classList.remove('d-none');
-        }
-    }
-</script>
-</div>
-
-{% else %}
-<p class="text-muted">No posts found.</p>
-{% endif %}
-
-<a href="/" class="text-muted small text-decoration-none d-inline-block mt-4">&larr; All posts</a>
 {% endblock %}

@@ -7,19 +7,28 @@
 </div>
 
 {% if posts_list %}
-<div class="list-group">
+<div class="d-flex flex-column gap-3">
     {% for post in posts_list %}
-    <a href="/posts/{{ post.id }}" class="list-group-item list-group-item-action py-3 px-4">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <div class="fw-medium mb-1">{{ post.title }}</div>
-                <div class="text-muted small">{{ post.content[:100] }}{% if post.content | length > 100 %}...{% endif %}</div>
-            </div>
-            <div class="text-end ms-4 flex-shrink-0">
-                <div class="small text-muted">{{ post.date_posted.strftime('%b %d, %Y') }}</div>
-                <a href="/users/{{ post.author.id }}/posts" class="small text-secondary" onclick="event.stopPropagation()">
-                    {{ post.author.username }}
-                </a>
+    <a href="/posts/{{ post.id }}" class="text-decoration-none">
+        <div class="post-card p-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div class="flex-grow-1 overflow-hidden">
+                    <h5 class="fw-semibold mb-1 post-card-title">{{ post.title }}</h5>
+                    <p class="text-muted small mb-0 text-truncate">{{ post.content }}</p>
+                </div>
+                <div class="text-end flex-shrink-0">
+                    <div class="small text-muted mb-1">{{ post.date_posted.strftime('%b %d, %Y') }}</div>
+                    <div class="d-flex align-items-center justify-content-end gap-1">
+                        <img
+                            src="{{ post.author.image_path }}"
+                            class="rounded-circle"
+                            width="18" height="18"
+                            style="object-fit:cover;"
+                            onerror="this.src='/static/profile_pics/default.jpg'"
+                        />
+                        <span class="small text-muted">{{ post.author.username }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </a>
@@ -27,6 +36,9 @@
 </div>
 
 {% else %}
-<p class="text-muted">No posts yet.</p>
+<div class="text-center py-5">
+    <p class="text-muted mb-3">No posts yet.</p>
+    <button class="btn btn-primary btn-sm" onclick="openNewPostModal()">Write the first one</button>
+</div>
 {% endif %}
 {% endblock %}

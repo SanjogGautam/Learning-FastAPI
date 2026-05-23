@@ -32,12 +32,12 @@
                 <span class="text-muted small">{{ post.date_posted.strftime('%b %d, %Y') }}</span>
                 <button
                     class="btn btn-sm btn-outline-primary"
-                    onclick="openEditModal(`{{ post.id }}`, `{{ post.title | replace('`', '') }}`, `{{ post.content | replace('`', '') }}`)">
+                    onclick='openEditModal({{ post.id }}, {{ post.title | tojson }}, {{ post.content | tojson }})'>
                     Edit
                 </button>
                 <button
                     class="btn btn-sm btn-outline-danger"
-                    onclick="deletePost({{ post.id }})">
+                    onclick='deletePost({{ post.id }})'>
                     Delete
                 </button>
             </div>

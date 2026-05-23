@@ -9,7 +9,11 @@
         <div class="d-flex gap-2 ms-3">
             <button
                 class="btn btn-sm btn-outline-primary"
-                onclick="openEditModal(`{{ post.id }}`, `{{ post.title | replace('`', '') }}`, `{{ post.content | replace('`', '') }}`)">
+                onclick='openEditModal(
+    {{ post.id }},
+    {{ post.title | tojson }},
+    {{ post.content | tojson }}
+)'>
                 Edit
             </button>
             <button class="btn btn-sm btn-outline-danger" onclick="deletePost({{ post.id }})">

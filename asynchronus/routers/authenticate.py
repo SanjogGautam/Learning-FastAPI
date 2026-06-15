@@ -9,7 +9,7 @@ from database import get_db
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 from config import settings
-from auth import create_access_token, hash_password, oauth2_scheme, verify_access_token, verify_password
+from auth import create_access_token, hash_password, verify_password, CurrentUser
 
 router = APIRouter()
 
@@ -80,22 +80,7 @@ async def login_for_access_token(
 # ── CURRENT USER ──────────────────────────────
 @router.get("/me", response_model=user_private)
 async def get_current_user(
-    auth_token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: CurrentUser
 ):
-    user_id = verify_access_token(auth_token)
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    result = await db.execute(select(models.User).where(models.User.id == int(user_id)))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    return user
+    return current_user
+''''''

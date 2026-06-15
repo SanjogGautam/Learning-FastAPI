@@ -36,8 +36,8 @@ class PostBase(BaseModel):
     title: str = Field(min_length=1, max_length=50)
     content: str = Field(min_length=1)
 class PostCreate(PostBase):
-    title: str = Field(min_length=1, max_length=50)
-    content: str = Field(min_length=1)
+    pass
+
 class Post_response(PostBase):
     model_config = ConfigDict(from_attributes=True)
     id: int

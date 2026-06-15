@@ -3,6 +3,12 @@ import jwt
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 from config import settings
+from typing import Annotated
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+import models
+from database import get_db
 passowrd_hash=PasswordHash.recommended()#to hash the password(creates password hasher with argon 2 with recommended settings)
 oauth2_scheme=OAuth2PasswordBearer(tokenUrl="api/users/token")#OAuth2PasswordBearer extracts the token from the Authorization header and verifies the format of the token and returns the token if valid otherwise raises an error
 def hash_password(password:str):
@@ -33,6 +39,37 @@ def verify_access_token(token:str):
         return None
     else:
         return payload.get("sub")
+    
+async def get_current_user(
+    auth_token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    user_id = verify_access_token(auth_token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try: 
+        user_id_int = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired ",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+    result = await db.execute(select(models.User).where(models.User.id == user_id_int))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    return user
+CurrentUser=Annotated[models.User,Depends(get_current_user)]
 """
 JWT has 3 parts: header, payload and signature
 header: contains the type of the token and the algorithm used to sign the token

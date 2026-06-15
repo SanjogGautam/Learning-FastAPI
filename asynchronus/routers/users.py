@@ -8,6 +8,7 @@ from sqlalchemy import select,func
 from sqlalchemy.orm import selectinload
 import models
 from database import get_db
+from auth import CurrentUser
 router=APIRouter()
 
 @router.get("", response_model=list[user_public])
@@ -33,7 +34,12 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def delete_user(user_id: int,current_user:CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
+    if user_id!=current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to Delete this User",
+        )
     result = await db.execute(
         select(models.User).where(models.User.id == user_id)
     )
@@ -46,7 +52,12 @@ async def delete_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]
 
 # user patch update:
 @router.patch("/{user_id}", response_model=user_public)
-async def user_update_parital(user_id: int, user_data: UserUpdate, db: Annotated[AsyncSession, Depends(get_db)]):
+async def user_update_parital(user_id: int, user_data: UserUpdate,current_user:CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
+    if user_id!=current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this user",
+        )
     result = await db.execute(
         select(models.User).where(models.User.id == user_id)
     )

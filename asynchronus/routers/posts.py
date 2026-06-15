@@ -10,35 +10,6 @@ from auth import oauth2_scheme, verify_access_token
 
 
 router = APIRouter()
-
-
-@router.get("", response_model=list[Post_response])
-async def get_all_posts(db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(
-        select(models.Post).options(selectinload(models.Post.author))
-    )
-    posts = result.scalars().all()
-    return posts
-
-
-# @router.post("", response_model=Post_response, status_code=status.HTTP_201_CREATED)
-# async def create_post(post: PostCreate, db: Annotated[AsyncSession, Depends(get_db)]):
-#     result = await db.execute(select(models.User).where(models.User.id == post.user_id))
-#     user = result.scalars().first()
-#     if not user:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="User not found"
-#         )   
-#     new_post = models.Post(
-#         title=post.title,
-#         content=post.content,
-#         user_id=post.user_id,
-#     )
-#     db.add(new_post)
-#     await db.commit()
-#     await db.refresh(new_post, attribute_names=["author"])
-#     return new_post
 @router.post("", response_model=Post_response, status_code=status.HTTP_201_CREATED)
 async def create_post(
     post: PostCreate,
@@ -70,6 +41,35 @@ async def create_post(
     await db.commit()
     await db.refresh(new_post, attribute_names=["author"])
     return new_post
+
+
+@router.get("", response_model=list[Post_response])
+async def get_all_posts(db: Annotated[AsyncSession, Depends(get_db)]):
+    result = await db.execute(
+        select(models.Post).options(selectinload(models.Post.author))
+    )
+    posts = result.scalars().all()
+    return posts
+
+
+# @router.post("", response_model=Post_response, status_code=status.HTTP_201_CREATED)
+# async def create_post(post: PostCreate, db: Annotated[AsyncSession, Depends(get_db)]):
+#     result = await db.execute(select(models.User).where(models.User.id == post.user_id))
+#     user = result.scalars().first()
+#     if not user:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="User not found"
+#         )   
+#     new_post = models.Post(
+#         title=post.title,
+#         content=post.content,
+#         user_id=post.user_id,
+#     )
+#     db.add(new_post)
+#     await db.commit()
+#     await db.refresh(new_post, attribute_names=["author"])
+#     return new_post
 
 @router.get("/{post_id}", response_model=Post_response)
 async def get_post(post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):

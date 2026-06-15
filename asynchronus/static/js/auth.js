@@ -47,7 +47,7 @@ async function initAuthArea() {
     if (!token) return; // not logged in — Login button stays as-is (default HTML)
 
     try {
-        const res = await fetch('/api/users/me', {
+        const res = await fetch('/api/auth/me', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 

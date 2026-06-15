@@ -14,8 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 import models
 from database import Base, engine, get_db
-from routers import users,posts
-from schema import Post_response,PostUpdate
+from routers import users,posts,authoriztion
+from schema import Post_response
 # Base.metadata.create_all(bind=engine)
 
 
@@ -35,6 +35,7 @@ app.mount("/media", StaticFiles(directory="media"), name="media")
 
 # 3. Configure the templates system configuration
 templates = Jinja2Templates(directory="templates")
+app.include_router(authoriztion.router,prefix="/api/auth",tags=["Auth"])
 app.include_router(users.router,prefix="/api/users",tags=["users"])
 app.include_router(posts.router,prefix="/api/posts",tags=['posts'])
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)

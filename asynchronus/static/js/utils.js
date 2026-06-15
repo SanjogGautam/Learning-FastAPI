@@ -1,15 +1,11 @@
 // =============================================
-//  utils.js — shared JS for the whole app
+//  utils.js — shared JS for posts/modals/theme
+//  (auth-related code lives in auth.js)
+//  (dark mode "instant apply" is inline in base.html)
 // =============================================
 
 
-// ── 1. DARK MODE ──────────────────────────────
-// runs immediately when the script loads
-(function () {
-    const saved = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-bs-theme', saved);
-})();
-
+// ── 1. THEME TOGGLE ───────────────────────────
 function initThemeToggle() {
     const toggle = document.getElementById('themeToggle');
     const label  = document.getElementById('themeLabel');
@@ -35,14 +31,29 @@ let newPostModal = null;
 
 function initNewPostModal() {
     const el = document.getElementById('newPostModal');
-    if (!el) return;
+    if (!el) {
+        console.warn('newPostModal element not found');
+        return;
+    }
+    if (typeof bootstrap === 'undefined') {
+        console.error('bootstrap is not loaded — newPostModal cannot initialize');
+        return;
+    }
     newPostModal = new bootstrap.Modal(el);
 }
 
 function openNewPostModal() {
+    if (!newPostModal) {
+        console.error('newPostModal was never initialized');
+        return;
+    }
+    if (!isLoggedIn()) {           // ← from auth.js
+        window.location.href = '/login';
+        return;
+    }
+
     document.getElementById('newTitle').value   = '';
     document.getElementById('newContent').value = '';
-    document.getElementById('newUserId').value  = '';
     document.getElementById('newPostError').classList.add('d-none');
     newPostModal.show();
 }
@@ -50,10 +61,9 @@ function openNewPostModal() {
 async function saveNewPost() {
     const title    = document.getElementById('newTitle').value.trim();
     const content  = document.getElementById('newContent').value.trim();
-    const user_id  = parseInt(document.getElementById('newUserId').value);
     const errorDiv = document.getElementById('newPostError');
 
-    if (!title || !content || !user_id) {
+    if (!title || !content) {
         errorDiv.textContent = 'All fields are required.';
         errorDiv.classList.remove('d-none');
         return;
@@ -61,8 +71,8 @@ async function saveNewPost() {
 
     const res = await fetch('/api/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, user_id })
+        headers: authHeaders(),   // ← from auth.js
+        body: JSON.stringify({ title, content })
     });
 
     if (res.ok) {
@@ -108,7 +118,7 @@ async function saveEdit() {
 
     const res = await fetch(`/api/posts/${currentPostId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),   // ← from auth.js
         body: JSON.stringify({ title, content })
     });
 
@@ -126,7 +136,12 @@ async function saveEdit() {
 // ── 4. DELETE POST ────────────────────────────
 async function deletePost(id) {
     if (!confirm('Delete this post?')) return;
-    const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+
+    const res = await fetch(`/api/posts/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders()    // ← from auth.js
+    });
+
     if (res.ok) {
         if (window.location.pathname.startsWith('/posts/')) {
             window.location.href = '/';
@@ -134,12 +149,13 @@ async function deletePost(id) {
             location.reload();
         }
     } else {
-        alert('Failed to delete post.');
+        const data = await res.json().catch(() => ({}));
+        alert(data.detail || 'Failed to delete post.');
     }
 }
 
 
-// ── 5. INIT EVERYTHING ON PAGE LOAD ──────────
+// ── 5. INIT ON PAGE LOAD ──────────────────────
 document.addEventListener('DOMContentLoaded', function () {
     initThemeToggle();
     initNewPostModal();

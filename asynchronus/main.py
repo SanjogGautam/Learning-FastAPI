@@ -89,6 +89,20 @@ async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail="Post is not found")
 
+@app.get("/login",include_in_schema=False)
+async def login_page(request: Request):
+    return templates.TemplateResponse(
+        request, 
+        name="login.html",
+        context={"title": "Login"})
+@app.get("/register",include_in_schema=False)
+async def register_page(request: Request):
+    return templates.TemplateResponse(
+        request, 
+        name="register.html",
+        context={"title": "Register"})
+
+
 # general http exception handler
 @app.exception_handler(starletteHTTPException)
 async def general_http_excetption_handler(request: Request, exception: starletteHTTPException):
@@ -104,9 +118,8 @@ async def general_http_excetption_handler(request: Request, exception: starlette
                                           "message": message
                                       },
                                       status_code=exception.status_code)
+
 # general request validation error
-
-
 @app.exception_handler(RequestValidationError)
 async def general_validation_excetption_handler(request: Request, exception: RequestValidationError):
     if request.url.path.startswith("/api"):

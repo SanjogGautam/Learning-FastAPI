@@ -56,7 +56,7 @@ async def login_for_acces_token(form_data: Annotated[OAuth2PasswordRequestForm,D
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    #dreate the access token
+    #create the access token
     access_token = create_access_token(data={"sub": str(user.id)}, 
                                        expires_delta=timedelta(minutes=settings.access_token_expire_minutes))
     return token(access_token=access_token, token_type="bearer")

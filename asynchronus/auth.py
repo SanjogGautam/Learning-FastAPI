@@ -3,8 +3,8 @@ import jwt
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 from config import settings
-passowrd_hash=PasswordHash.recommended()#to hash the password
-oauth2_scheme=OAuth2PasswordBearer(tokenUrl="api/users/token")
+passowrd_hash=PasswordHash.recommended()#to hash the password(creates password hasher with argon 2 with recommended settings)
+oauth2_scheme=OAuth2PasswordBearer(tokenUrl="api/users/token")#OAuth2PasswordBearer extracts the token from the Authorization header and verifies the format of the token and returns the token if valid otherwise raises an error
 def hash_password(password:str):
     return passowrd_hash.hash(password)
 def verify_password(plain_password:str,hashed_password:str):
@@ -33,3 +33,10 @@ def verify_access_token(token:str):
         return None
     else:
         return payload.get("sub")
+"""
+JWT has 3 parts: header, payload and signature
+header: contains the type of the token and the algorithm used to sign the token
+payload: contains the claims (data) of the token
+signature: is used to verify the authenticity of the token and is created by signing the header and payload with the secret key using the specified algorithm
+all 3 are base64 encoded and concatenated with dots to form the final token
+"""

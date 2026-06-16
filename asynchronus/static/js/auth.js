@@ -52,17 +52,24 @@ async function initAuthArea() {
         });
 
         if (!res.ok) {
-            clearToken(); // token invalid/expired
+            clearToken(); // token invalid/expired 
             return;
         }
 
         const user = await res.json();
 
         authArea.innerHTML = `
-            <a href="/users/${user.id}/posts" class="text-white-50 small text-decoration-none">
-                ${user.username}
-            </a>
-            <button class="btn btn-sm btn-outline-light" onclick="logout()">Logout</button>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    ${user.username}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/account">My Account</a></li>
+                    <li><a class="dropdown-item" href="/users/${user.id}/posts">My Posts</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button class="dropdown-item text-danger" onclick="logout()">Logout</button></li>
+                </ul>
+            </div>
         `;
     } catch (err) {
         console.error('Failed to fetch current user', err);

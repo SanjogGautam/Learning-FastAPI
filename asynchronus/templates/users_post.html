@@ -30,16 +30,19 @@
             </a>
             <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
                 <span class="text-muted small">{{ post.date_posted.strftime('%b %d, %Y') }}</span>
-                <button
-                    class="btn btn-sm btn-outline-primary"
-                    onclick='openEditModal({{ post.id }}, {{ post.title | tojson }}, {{ post.content | tojson }})'>
-                    Edit
-                </button>
-                <button
-                    class="btn btn-sm btn-outline-danger"
-                    onclick='deletePost({{ post.id }})'>
-                    Delete
-                </button>
+                <!-- Edit/Delete shown only if logged-in user owns this post -->
+                <div class="post-actions-{{ post.id }}" style="display:none;">
+                    <button
+                        class="btn btn-sm btn-outline-primary"
+                        onclick="openEditModal(`{{ post.id }}`, `{{ post.title | replace('`', '') }}`, `{{ post.content | replace('`', '') }}`)">
+                        Edit
+                    </button>
+                    <button
+                        class="btn btn-sm btn-outline-danger"
+                        onclick="deletePost({{ post.id }})">
+                        Delete
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -55,7 +58,7 @@
 </div>
 {% endif %}
 
-<!-- Edit Modal — only needed on this page -->
+<!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -81,4 +84,36 @@
         </div>
     </div>
 </div>
+
+<script>
+    // show edit/delete buttons only for posts owned by the logged-in user
+    const POST_USER_IDS = {
+        {% for post in posts_list %}
+        {{ post.id }}: {{ post.author.id }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        const token = getToken();
+        if (!token) return;
+
+        try {
+            const res = await fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) return;
+            const user = await res.json();
+
+            // show action buttons for each post owned by this user
+            for (const [postId, authorId] of Object.entries(POST_USER_IDS)) {
+                if (user.id === authorId) {
+                    const actions = document.querySelector(`.post-actions-${postId}`);
+                    if (actions) actions.style.display = 'flex';
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    });
+</script>
 {% endblock %}

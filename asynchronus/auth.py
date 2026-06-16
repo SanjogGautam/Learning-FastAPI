@@ -10,7 +10,7 @@ from sqlalchemy import select
 import models
 from database import get_db
 passowrd_hash=PasswordHash.recommended()#to hash the password(creates password hasher with argon 2 with recommended settings)
-oauth2_scheme=OAuth2PasswordBearer(tokenUrl="api/users/token")#OAuth2PasswordBearer extracts the token from the Authorization header and verifies the format of the token and returns the token if valid otherwise raises an error
+oauth2_scheme=OAuth2PasswordBearer(tokenUrl="api/auth/token")#OAuth2PasswordBearer extracts the token from the Authorization header and verifies the format of the token and returns the token if valid otherwise raises an error
 def hash_password(password:str):
     return passowrd_hash.hash(password)
 def verify_password(plain_password:str,hashed_password:str):

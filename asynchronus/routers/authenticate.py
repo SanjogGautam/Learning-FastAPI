@@ -40,7 +40,6 @@ async def register(user: user_create, db: Annotated[AsyncSession, Depends(get_db
     new_user = models.User(
         username=user.username,
         email=user.email.lower(),
-        image_file=user.image_file,
         password_hash=hash_password(user.password),
     )
     db.add(new_user)

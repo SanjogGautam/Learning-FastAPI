@@ -9,12 +9,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import models
 from database import get_db
+import hashlib 
+import secrets
 passowrd_hash=PasswordHash.recommended()#to hash the password(creates password hasher with argon 2 with recommended settings)
 oauth2_scheme=OAuth2PasswordBearer(tokenUrl="api/auth/token")#OAuth2PasswordBearer extracts the token from the Authorization header and verifies the format of the token and returns the token if valid otherwise raises an error
 def hash_password(password:str):
     return passowrd_hash.hash(password)
 def verify_password(plain_password:str,hashed_password:str):
     return passowrd_hash.verify(plain_password,hashed_password)
+
+def generate_reset_token()-> str:
+    return secrets.token_urlsafe(32)# this function creates urlbase64 char which is perfect for email links
+def hash_reset_token(token: str)-> str:
+    return hashlib.sha256(token.encode()).hexdigest()# takes a token and returns its sha-256 hash
+
 #to create access token
 def create_access_token(data:dict,expires_delta:timedelta|None=None):
     to_encode=data.copy()

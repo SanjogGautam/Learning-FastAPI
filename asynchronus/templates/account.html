@@ -36,6 +36,38 @@
     </div>
 </div>
 
+<!-- Change Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold">Change Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="passwordError" class="alert alert-danger d-none"></div>
+                <div id="passwordSuccess" class="alert alert-success d-none"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Current Password</label>
+                    <input id="currentPassword" type="password" class="form-control" placeholder="••••••••"/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">New Password</label>
+                    <input id="newPassword" type="password" class="form-control" placeholder="At least 6 characters" minlength="6"/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Confirm New Password</label>
+                    <input id="confirmNewPassword" type="password" class="form-control" placeholder="Re-enter new password" minlength="6"/>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button id="changePasswordBtn" class="btn btn-primary" onclick="changePassword()">Update Password</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Upload Picture Modal -->
 <div class="modal fade" id="pictureModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -94,12 +126,13 @@
 
 <script>
     let currentUserId = null;
-    let editModal, pictureModal, deleteModal;
+    let editModal, pictureModal, deleteModal, passwordModal;
 
     document.addEventListener('DOMContentLoaded', async function () {
-        editModal    = new bootstrap.Modal(document.getElementById('editModal'));
-        pictureModal = new bootstrap.Modal(document.getElementById('pictureModal'));
-        deleteModal  = new bootstrap.Modal(document.getElementById('deleteModal'));
+        editModal     = new bootstrap.Modal(document.getElementById('editModal'));
+        pictureModal  = new bootstrap.Modal(document.getElementById('pictureModal'));
+        deleteModal   = new bootstrap.Modal(document.getElementById('deleteModal'));
+        passwordModal = new bootstrap.Modal(document.getElementById('passwordModal'));
 
         const token = getToken();
         if (!token) { window.location.href = '/login'; return; }
@@ -158,6 +191,10 @@
                                     onclick="openEditModal('${user.username}', '${user.email}')">
                                 Edit Profile
                             </button>
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    onclick="openPasswordModal()">
+                                Change Password
+                            </button>
                             <a href="/users/${user.id}/posts" class="btn btn-outline-secondary btn-sm">
                                 My Posts
                             </a>
@@ -210,6 +247,80 @@
             const data = await res.json();
             errorDiv.textContent = data.detail || 'Failed to update.';
             errorDiv.classList.remove('d-none');
+        }
+    }
+
+    // ── Change password ───────────────────────────
+    function openPasswordModal() {
+        document.getElementById('currentPassword').value     = '';
+        document.getElementById('newPassword').value          = '';
+        document.getElementById('confirmNewPassword').value   = '';
+        document.getElementById('passwordError').classList.add('d-none');
+        document.getElementById('passwordSuccess').classList.add('d-none');
+        passwordModal.show();
+    }
+
+    async function changePassword() {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword     = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmNewPassword').value;
+        const errorDiv         = document.getElementById('passwordError');
+        const successDiv       = document.getElementById('passwordSuccess');
+        const btn              = document.getElementById('changePasswordBtn');
+
+        errorDiv.classList.add('d-none');
+        successDiv.classList.add('d-none');
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            errorDiv.textContent = 'All fields are required.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            errorDiv.textContent = "New passwords don't match.";
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        btn.disabled    = true;
+        btn.textContent = 'Updating...';
+
+        try {
+            const res = await fetch('/api/auth/me/change-password', {
+                method: 'PATCH',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                errorDiv.textContent = data.detail || 'Failed to change password.';
+                errorDiv.classList.remove('d-none');
+                btn.disabled    = false;
+                btn.textContent = 'Update Password';
+                return;
+            }
+
+            successDiv.textContent = data.message || 'Password changed successfully.';
+            successDiv.classList.remove('d-none');
+            document.getElementById('currentPassword').value    = '';
+            document.getElementById('newPassword').value         = '';
+            document.getElementById('confirmNewPassword').value  = '';
+            btn.disabled    = false;
+            btn.textContent = 'Update Password';
+
+            setTimeout(() => { passwordModal.hide(); }, 1500);
+
+        } catch (err) {
+            errorDiv.textContent = 'Network error. Please try again.';
+            errorDiv.classList.remove('d-none');
+            btn.disabled    = false;
+            btn.textContent = 'Update Password';
         }
     }
 
@@ -266,7 +377,7 @@
         });
 
         if (res.ok || res.status === 204) {
-            clearToken();                    // ✅ was removeToken() — fixed
+            clearToken();
             window.location.href = '/';
         } else {
             const data = await res.json().catch(() => ({}));

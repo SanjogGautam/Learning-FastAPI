@@ -140,6 +140,14 @@ async def register_page(request: Request):
 async def account_page(request: Request):
     return templates.TemplateResponse(request, name="account.html", context={"title": "My Account"})
 
+@app.get("/forgot-password", response_class=HTMLResponse, include_in_schema=False)
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse(request, name="forgot_password.html", context={"title": "Forgot Password"})
+
+@app.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
+async def reset_password_page(request: Request, token: str):
+    return templates.TemplateResponse(request, name="reset_password.html", context={"title": "Reset Password", "token": token})
+
 # general http exception handler
 
 

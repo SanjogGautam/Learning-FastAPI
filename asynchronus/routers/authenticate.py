@@ -10,6 +10,13 @@ from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 from config import settings
 from auth import create_access_token, hash_password, verify_password, CurrentUser
+#for reset logic 
+from fastapi import BackgroundTasks
+from datetime import UTC,datetime
+from sqlalchemy import delete as sql_delete,func
+from auth import generate_reset_token,hash_reset_token
+from email_utils import send_password_reset_email
+from schema import ChangePasswordRequest,ForgotPasswordRequest,ResetPasswordRequest
 
 router = APIRouter()
 
@@ -82,4 +89,105 @@ async def get_current_user(
     current_user: CurrentUser
 ):
     return current_user
-''''''
+
+@router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
+async def forgot_password(
+    request_data: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Annotated[AsyncSession,Depends(get_db)],
+):
+    result=await db.execute(
+        select(models.User).where(func.lower(models.User.email) == request_data.email.lower(),
+                                  ),
+    )
+    user = result.scalars().first()
+    if user: 
+        await db.execute(
+            sql_delete(models.PasswordResetToken).where(
+                models.PasswordResetToken.user_id == user.id,
+            ),
+        )
+        token = generate_reset_token()
+        token_hash=hash_reset_token(token)
+        expires_at = datetime.now(UTC) + timedelta(
+            minutes= settings.reset_token_expire_minutes
+        )
+        reset_token = models.PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        db.add(reset_token)
+        await db.commit()
+
+        background_tasks.add_task(
+            send_password_reset_email,
+            email_to=user.email,
+            username=user.username,
+            token=token,
+        )
+    return {"message":"If an account with that email exists, a password reset link has been sent."}
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(
+    request_data: ResetPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    # 1. Hash the incoming token so we can compare it against what's stored
+    token_hash = hash_reset_token(request_data.token)
+
+    # 2. Look up a matching, not-yet-expired reset token
+    result = await db.execute(
+        select(models.PasswordResetToken).where(
+            models.PasswordResetToken.token_hash == token_hash,
+            models.PasswordResetToken.expires_at > datetime.now(UTC),
+        )
+    )
+    reset_token = result.scalars().first()
+
+    if not reset_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link. Please request a new one.",
+        )
+
+    # 3. Look up the user this token belongs to
+    result = await db.execute(
+        select(models.User).where(models.User.id == reset_token.user_id)
+    )
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link. Please request a new one.",
+        )
+
+    # 4. Update the password
+    user.password_hash = hash_password(request_data.new_password)
+
+    # 5. Delete the token so it can't be reused
+    await db.delete(reset_token)
+
+    await db.commit()
+
+    return {"message": "Your password has been reset successfully. You can now log in."}
+
+#change password to the users who are already logged in and have access token
+@router.patch("/me/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+
+    current_user.password_hash = hash_password(password_data.new_password)
+    await db.commit()
+
+    return {"message": "Password changed successfully."}
+        

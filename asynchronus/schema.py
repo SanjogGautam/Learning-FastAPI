@@ -45,6 +45,12 @@ class Post_response(PostBase):
     user_id: int
     date_posted:datetime
     author: user_public 
+class PaginatedPostsResponse(BaseModel):
+    posts: list[Post_response]
+    total: int
+    skip: int
+    limit: int
+    has_more: int
 class PostUpdate(BaseModel):
     title: str|None = Field(default=None,min_length=1, max_length=50)
     content: str|None = Field(default=None,min_length=1)

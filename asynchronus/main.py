@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, status, Depends
+from fastapi import FastAPI, Request, HTTPException, status, Depends,Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles  # 1. Import the static file handler
@@ -10,13 +10,14 @@ from fastapi.exception_handlers import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as starletteHTTPException
 from typing import Annotated
-from sqlalchemy import select
+from sqlalchemy import select,func
 from sqlalchemy.orm import selectinload
 from routers import authenticate
 import models
 from database import Base, engine, get_db
 from routers import users, posts
-from schema import Post_response
+from schema import Post_response,PaginatedPostsResponse
+from config import settings
 # Base.metadata.create_all(bind=engine)
 
 
@@ -44,13 +45,18 @@ app.include_router(posts.router, prefix="/api/posts", tags=['posts'])
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/posts", response_class=HTMLResponse, include_in_schema=False)
 async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)))
+    count_result=await db.execute(select(func.count()).select_from(models.Post))
+    total=count_result.scalar() or 0
+    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc()).limit(settings.post_per_page))  
     posts_list = result.scalars().all()
+    has_more = total > len(posts_list)
     return templates.TemplateResponse(
         request, name="home.html",
         context={
             "posts_list": posts_list,
-            "title": "Home"
+            "title":"Home",
+            "limit":settings.post_per_page,
+            "has_more":has_more
         }
     )
 
@@ -60,25 +66,43 @@ async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
 async def user_posts_page(
     request: Request,
     user_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: int = 0,
+    limit: int = 10,
 ):
     result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="user is not found"
-        )
-    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(models.Post.user_id == user_id))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user is not found")
+
+    count_result = await db.execute(
+        select(func.count()).select_from(models.Post).where(models.Post.user_id == user_id)
+    )
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
+        .offset(skip)
+        .limit(limit)
+    )
     posts = result.scalars().all()
+    has_more = skip + len(posts) < total
+
     return templates.TemplateResponse(
         request, name="users_post.html",
         context={
             "posts_list": posts,
+            "author": user,           # ✅ pass author separately — don't rely on posts_list[0]
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "has_more": has_more,
             "title": f"{user.username}'s Posts"
         }
     )
-
 
 @app.get("/posts/{post_id}", include_in_schema=False, response_model=Post_response)
 async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):

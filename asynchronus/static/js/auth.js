@@ -52,11 +52,19 @@ async function initAuthArea() {
         });
 
         if (!res.ok) {
-            clearToken(); // token invalid/expired 
+            clearToken(); // token invalid/expired
             return;
         }
 
         const user = await res.json();
+        const roles = user.roles || [];
+        const isPrivileged = roles.includes('admin') || roles.includes('superadmin');
+
+        // reveal the Admin nav link only for admins/superadmins
+        const adminNavItem = document.getElementById('adminNavItem');
+        if (adminNavItem && isPrivileged) {
+            adminNavItem.style.display = '';
+        }
 
         authArea.innerHTML = `
             <div class="dropdown">
@@ -66,6 +74,7 @@ async function initAuthArea() {
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="/account">My Account</a></li>
                     <li><a class="dropdown-item" href="/users/${user.id}/posts">My Posts</a></li>
+                    ${isPrivileged ? '<li><a class="dropdown-item" href="/admin">Admin Panel</a></li>' : ''}
                     <li><hr class="dropdown-divider"></li>
                     <li><button class="dropdown-item text-danger" onclick="logout()">Logout</button></li>
                 </ul>

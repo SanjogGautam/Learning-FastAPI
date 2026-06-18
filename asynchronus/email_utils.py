@@ -1,4 +1,3 @@
-import asyncio
 from email.message import EmailMessage
 import aiosmtplib
 from fastapi.templating import Jinja2Templates
@@ -22,17 +21,16 @@ async def send_email(
     message.set_content(plain_text)
     if html_content:
         message.add_alternative(html_content, subtype="html")
-    await asyncio.wait_for(
-        aiosmtplib.send(
-            message,
-            hostname=settings.mail_server,
-            port=settings.mail_port,
-            username=settings.mail_username,
-            password=settings.mail_password.get_secret_value(),
-            start_tls=settings.mail_use_tls,
-        ),
-        timeout=10,
-    )
+    await aiosmtplib.send(
+    message,
+    hostname=settings.mail_server,
+    port=settings.mail_port,
+    username=settings.mail_username,
+    password=settings.mail_password.get_secret_value(),
+    start_tls=True,        
+    timeout=30,            
+)
+
 
 async def send_password_reset_email(email_to: str, username: str, token: str) -> None:
     reset_url = f"{settings.frontend_url}/reset-password?token={token}"

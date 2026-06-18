@@ -13,6 +13,8 @@ from PIL import UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
 from image_utils import delete_profile_image,process_profile_image
 from config import settings
+from routers.rbac import require_role
+from models import RoleName
 router=APIRouter()
 
 
@@ -35,79 +37,87 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
         return user
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail="User not found")
-# user delete
 
-
+# ── user delete ──
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int,current_user:CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(
-        select(models.User).where(models.User.id == user_id)
-    )
+async def delete_user(
+    user_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    if user_id!=current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    is_self = user_id == current_user.id
+    is_privileged = bool(current_user.role_names & {RoleName.admin.value, RoleName.superadmin.value})
+
+    if not is_self and not is_privileged:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to Delete this User",
+            detail="Not authorized to delete this user",
         )
-    old_filename=user.image_file
+
+    if user.has_role(RoleName.superadmin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The superadmin account cannot be deleted",
+        )
+
+    old_filename = user.image_file
     await db.delete(user)
     await db.commit()
     if old_filename:
         delete_profile_image(old_filename)
 
-# user patch update:
+
+# user patch update
 @router.patch("/{user_id}", response_model=user_public)
-async def user_update_parital(user_id: int, user_data: UserUpdate,current_user:CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
-    if user_id!=current_user.id:
+async def user_update_parital(
+    user_id: int,
+    user_data: UserUpdate,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    is_self = user_id == current_user.id
+    is_privileged = bool(current_user.role_names & {RoleName.admin.value, RoleName.superadmin.value})
+
+    if not is_self and not is_privileged:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this user",
         )
-    result = await db.execute(
-        select(models.User).where(models.User.id == user_id)
-    )
+
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
     if user_data.username is not None and user_data.username.lower() != user.username.lower():
         result = await db.execute(
-            select(models.User).where(
-                func.lower(models.User.username) == user_data.username.lower()
-            )
+            select(models.User).where(func.lower(models.User.username) == user_data.username.lower())
         )
         existing_user = result.scalars().first()
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="username already exists"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="username already exists")
+
     if user_data.email is not None and user_data.email.lower() != user.email.lower():
         result = await db.execute(
             select(models.User).where(func.lower(models.User.email) == user_data.email.lower())
         )
         existing_user = result.scalars().first()
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="email already exists"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already exists")
 
     if user_data.email is not None:
-        user.email = user_data.email.lower()
+        user.email = user_data.email
     if user_data.username is not None:
         user.username = user_data.username
-    # or we can also use
-    # data=user_data.model_dump(exclude_unset=True)
-    # for field,value in data.items():
-    #     setattr(user,field,value)
+
     await db.commit()
     await db.refresh(user)
     return user
-
 
 # get all the post by a specific user
 @router.get("/{user_id}/posts", response_model=PaginatedPostsResponse)

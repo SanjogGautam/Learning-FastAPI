@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if posts_list %}
+{% set author = posts_list[0].author %}
 
 <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
     <img
@@ -13,14 +15,13 @@
     />
     <div>
         <div class="fw-semibold fs-5">{{ author.username }}</div>
-        <div class="text-muted small">
-            {{ total }} post{% if total != 1 %}s{% endif %}
+        <div class="text-muted small" id="postCount">
+            {{ posts_list | length }} post{% if posts_list | length != 1 %}s{% endif %}
         </div>
     </div>
 </div>
 
-{% if posts_list %}
-<div class="list-group">
+<div class="list-group" id="postsList">
     {% for post in posts_list %}
     <div class="list-group-item py-3 px-4">
         <div class="d-flex justify-content-between align-items-center">
@@ -29,16 +30,13 @@
             </a>
             <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
                 <span class="text-muted small">{{ post.date_posted.strftime('%b %d, %Y') }}</span>
-                <!-- Edit/Delete shown only if logged-in user owns this post -->
-                <div class="post-actions-{{ post.id }}" style="display:none;">
+                <div class="post-actions-{{ post.id }} d-flex gap-2" style="display:none!important;">
                     <button
                         class="btn btn-sm btn-outline-primary"
                         onclick="openEditModal(`{{ post.id }}`, `{{ post.title | replace('`', '') }}`, `{{ post.content | replace('`', '') }}`)">
                         Edit
                     </button>
-                    <button
-                        class="btn btn-sm btn-outline-danger"
-                        onclick="deletePost({{ post.id }})">
+                    <button class="btn btn-sm btn-outline-danger" onclick="deletePost({{ post.id }})">
                         Delete
                     </button>
                 </div>
@@ -48,28 +46,15 @@
     {% endfor %}
 </div>
 
-<!-- Pagination controls -->
-<div class="d-flex justify-content-between align-items-center mt-4">
-    <a
-        href="?skip={{ skip - limit if skip - limit > 0 else 0 }}&limit={{ limit }}"
-        class="btn btn-sm btn-outline-secondary {% if skip == 0 %}disabled{% endif %}"
-        {% if skip == 0 %}aria-disabled="true" tabindex="-1"{% endif %}
-    >
-        &larr; Previous
-    </a>
-
-    <span class="text-muted small">
-        Showing {{ skip + 1 }}&ndash;{{ skip + posts_list|length }} of {{ total }}
-    </span>
-
-    <a
-        href="?skip={{ skip + limit }}&limit={{ limit }}"
-        class="btn btn-sm btn-outline-secondary {% if not has_more %}disabled{% endif %}"
-        {% if not has_more %}aria-disabled="true" tabindex="-1"{% endif %}
-    >
-        Next &rarr;
-    </a>
+{% if has_more %}
+<div class="text-center mt-4" id="loadMoreContainer">
+    <button class="btn btn-outline-secondary btn-sm px-4" id="loadMoreBtn" onclick="loadMore()">
+        Load More
+    </button>
 </div>
+{% endif %}
+
+<a href="/" class="text-muted small text-decoration-none d-inline-block mt-4">&larr; All posts</a>
 
 {% else %}
 <div class="text-center py-5">
@@ -77,8 +62,6 @@
     <button class="btn btn-primary btn-sm" onclick="openNewPostModal()">Write your first post</button>
 </div>
 {% endif %}
-
-<a href="/" class="text-muted small text-decoration-none d-inline-block mt-4">&larr; All posts</a>
 
 <!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
@@ -107,35 +90,112 @@
     </div>
 </div>
 
+{% if posts_list %}
 <script>
-    // show edit/delete buttons only for posts owned by the logged-in user
+    const USER_ID    = {{ posts_list[0].author.id }};
+    let currentSkip  = {{ posts_list | length }};
+    const limit      = {{ limit }};
+    let hasMore      = {{ 'true' if has_more else 'false' }};
+    let loading      = false;
+
     const POST_USER_IDS = {
         {% for post in posts_list %}
         {{ post.id }}: {{ post.author.id }}{% if not loop.last %},{% endif %}
         {% endfor %}
     };
 
-    document.addEventListener('DOMContentLoaded', async function () {
+    // ── Show edit/delete for owned posts ──────────
+    async function checkOwnership(idsMap) {
         const token = getToken();
         if (!token) return;
-
         try {
             const res = await fetch('/api/auth/me', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) return;
             const user = await res.json();
-
-            // show action buttons for each post owned by this user
-            for (const [postId, authorId] of Object.entries(POST_USER_IDS)) {
+            for (const [postId, authorId] of Object.entries(idsMap)) {
                 if (user.id === authorId) {
-                    const actions = document.querySelector(`.post-actions-${postId}`);
-                    if (actions) actions.style.display = 'flex';
+                    const el = document.querySelector(`.post-actions-${postId}`);
+                    if (el) el.style.setProperty('display', 'flex', 'important');
                 }
+            }
+            return user;
+        } catch (e) { console.error(e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => checkOwnership(POST_USER_IDS));
+
+    // ── Load more posts ───────────────────────────
+    async function loadMore() {
+        if (loading || !hasMore) return;
+        loading = true;
+
+        const btn = document.getElementById('loadMoreBtn');
+        btn.disabled    = true;
+        btn.textContent = 'Loading...';
+
+        try {
+            const res = await fetch(`/api/users/${USER_ID}/posts?skip=${currentSkip}&limit=${limit}`);
+            if (!res.ok) throw new Error('Failed');
+            const data = await res.json();
+
+            const container = document.getElementById('postsList');
+            const newIds    = {};
+
+            data.posts.forEach(post => {
+                const date = new Date(post.date_posted).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                });
+
+                const item = document.createElement('div');
+                item.className = 'list-group-item py-3 px-4';
+                item.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="/posts/${post.id}" class="fw-medium text-decoration-none post-title-link">
+                            ${post.title}
+                        </a>
+                        <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
+                            <span class="text-muted small">${date}</span>
+                            <div class="post-actions-${post.id} d-flex gap-2" style="display:none!important;">
+                                <button class="btn btn-sm btn-outline-primary"
+                                    onclick="openEditModal(\`${post.id}\`, \`${post.title.replace(/\`/g,'')}\`, \`${post.content.replace(/\`/g,'')}\`)">
+                                    Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                    onclick="deletePost(${post.id})">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+                newIds[post.id] = post.author.id;
+            });
+
+            // check ownership for newly loaded posts
+            await checkOwnership(newIds);
+
+            currentSkip += data.posts.length;
+            hasMore      = data.has_more;
+
+            document.getElementById('postCount').textContent =
+                `${currentSkip} post${currentSkip !== 1 ? 's' : ''}`;
+
+            if (!hasMore) {
+                document.getElementById('loadMoreContainer').style.display = 'none';
+            } else {
+                btn.disabled    = false;
+                btn.textContent = 'Load More';
             }
         } catch (e) {
             console.error(e);
+            btn.disabled    = false;
+            btn.textContent = 'Try again';
         }
-    });
+        loading = false;
+    }
 </script>
+{% endif %}
 {% endblock %}

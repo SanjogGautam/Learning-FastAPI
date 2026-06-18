@@ -110,7 +110,10 @@
             const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
             if (!res.ok) return;
             const user = await res.json();
-            if (user.id === POST_AUTHOR_ID) {
+            const roles = user.roles || [];
+            const isPrivileged = roles.includes('admin') || roles.includes('superadmin');
+
+            if (user.id === POST_AUTHOR_ID || isPrivileged) {
                 document.getElementById('postActions').style.display = 'flex';
             }
         } catch (e) { console.error(e); }

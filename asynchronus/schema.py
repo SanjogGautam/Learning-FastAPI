@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict, EmailStr,field_validator
 from datetime import datetime
 
 # 1. The Shared Blueprint (Fields common to both creating and reading data)
@@ -19,6 +19,13 @@ class user_public(BaseModel):
     username: str
     image_file: str | None
     image_path: str
+    roles: list[str] = []
+    @field_validator("roles", mode="before")
+    @classmethod
+    def extract_role_names(cls, v):
+        if v and hasattr(v[0], "name"):
+            return [role.name.value for role in v]
+        return v
 class user_private(userBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -26,6 +33,13 @@ class user_private(userBase):
     email: EmailStr
     image_file: str | None
     image_path: str
+    roles: list[str] = []
+    @field_validator("roles", mode="before")
+    @classmethod
+    def extract_role_names(cls, v):
+        if v and hasattr(v[0], "name"):
+            return [role.name.value for role in v]
+        return v
 class UserUpdate(BaseModel):
     username: str|None = Field(default=None,min_length=3, max_length=40)
     email: EmailStr|None = Field(default=None,max_length=120)
@@ -50,7 +64,7 @@ class PaginatedPostsResponse(BaseModel):
     total: int
     skip: int
     limit: int
-    has_more: int
+    has_more: bool
 class PostUpdate(BaseModel):
     title: str|None = Field(default=None,min_length=1, max_length=50)
     content: str|None = Field(default=None,min_length=1)
